@@ -1,16 +1,30 @@
+use http::status::StatusCode;
+use serde::{Deserialize, Serialize};
 use std::str;
+use warp::reply;
 use warp::Filter;
 
-use serde::{Deserialize, Serialize};
+use crypto_leet_http_server_voll_cool::caesar::encrypt_caesar;
+use crypto_leet_http_server_voll_cool::rot13::encrypt_rot13;
 
-use warp::reply;
+#[tokio::main]
+async fn main() {
+    let rot13 = warp::path("rot13")
+        .and(warp::body::json())
+        .map(|query: Rot13Query| handle_rot13_query(&query));
 
-use http::status::StatusCode;
+    let caesar = warp::path("caesar")
+        .and(warp::body::json())
+        .map(|query: CaesarQuery| handle_caesar_query(&query));
+
+    warp::serve(rot13.or(caesar))
+        .run(([127, 0, 0, 1], 3030))
+        .await;
+}
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Rot13Query {
-    //#[serde(rename = "boolshit")]
     text: String,
 }
 
@@ -20,34 +34,29 @@ enum Rot13Reply {
     Failed { error: String },
 }
 
-async fn main2() {
-    // GET /hello/warp => 200 OK with body "Hello, warp!"
-    //let hello = warp::path!("rot13" / String).map(|name| format!("Hello, {}!", name));
-    let hello = warp::path("rot13")
-        .and(warp::body::json())
-        //.and(warp::path::param::<String>())
-        .map(
-            |query: Rot13Query| handle_query(&query),
-            //|query: Rot13Query| {
-            //rot13(&(query.text)).unwrap_or(String::from("i no can handle special chars"))
-            //}
-        );
-
-    warp::serve(hello).run(([127, 0, 0, 1], 3030)).await;
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CaesarQuery {
+    text: String,
+    rotation: u8,
 }
 
-fn handle_query(query: &Rot13Query) -> reply::WithStatus<reply::Json> {
-    let (json, status_code) = match rot13(&query.text) {
+#[derive(Serialize)]
+enum CaesarReply {
+    Success { rotated_text: String },
+    Failed { error: String },
+}
+
+fn handle_rot13_query(query: &Rot13Query) -> reply::WithStatus<reply::Json> {
+    let (json, status_code) = match encrypt_rot13(&query.text) {
         Err(error) => (
             reply::json(&Rot13Reply::Failed {
-                error: error.message,
+                error: error.to_string(),
             }),
             StatusCode::BAD_REQUEST,
         ),
         Ok(rotated_text) => (
-            reply::json(&Rot13Reply::Success {
-                rotated_text: rotated_text,
-            }),
+            reply::json(&Rot13Reply::Success { rotated_text }),
             StatusCode::OK,
         ),
     };
@@ -55,53 +64,19 @@ fn handle_query(query: &Rot13Query) -> reply::WithStatus<reply::Json> {
     warp::reply::with_status(json, status_code)
 }
 
-#[derive(Debug)]
-struct Error {
-    pub message: String,
-}
+fn handle_caesar_query(query: &CaesarQuery) -> reply::WithStatus<reply::Json> {
+    let (json, status_code) = match encrypt_caesar(&query.text, query.rotation) {
+        Err(error) => (
+            reply::json(&CaesarReply::Failed {
+                error: error.to_string(),
+            }),
+            StatusCode::BAD_REQUEST,
+        ),
+        Ok(rotated_text) => (
+            reply::json(&CaesarReply::Success { rotated_text }),
+            StatusCode::OK,
+        ),
+    };
 
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.message)
-    }
-}
-
-#[tokio::main]
-async fn main() {
-    main2().await;
-    println!("ntaienritae");
-    println!("{}", rot13("Hallo").unwrap());
-}
-
-fn rot13(to_be_rotated: &str) -> Result<String, Error> {
-    println!("{}", String::from("buuuuuuuuuuuuuuuuuuuuuuuuuuuh"));
-    for char in to_be_rotated.chars() {
-        println!("{}", char.to_ascii_lowercase());
-        if !('a'..='z').contains(&char.to_ascii_lowercase()) {
-            return Err(Error {
-                message: String::from("Du musst zwischen a und z machen Brudi"),
-            });
-        }
-    }
-
-    Ok(to_be_rotated
-        .chars()
-        .into_iter()
-        .map(|char| rot13_char(char))
-        .collect())
-}
-
-fn rot13_char(char: char) -> char {
-    let offset: u8;
-    if ('a'..'z').contains(&char) {
-        offset = 'a' as u8;
-    } else if ('A'..'Z').contains(&char) {
-        offset = 'A' as u8;
-    } else {
-        panic!("Ihr habt gemacht Bug lol.")
-    }
-
-    let char_as_byte = char as u8;
-
-    ((((char_as_byte - offset) + 13) % 26) + offset) as char
+    warp::reply::with_status(json, status_code)
 }
