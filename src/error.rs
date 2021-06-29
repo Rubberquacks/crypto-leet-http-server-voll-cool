@@ -1,14 +1,16 @@
 #[derive(Debug)]
 pub enum Error {
-    InvalidCharacterError { character: char },
+    InvalidPlaintextCharacterError { character: char },
     InvalidCaesarRotation { rotation: u8 },
+    InvalidKeyCharacterError { character: char },
+    EmptyKeyError,
 }
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let message = match self {
-            Error::InvalidCharacterError { character } => format!(
-                "Found invalid character {}. Must be between a and z.",
+            Error::InvalidPlaintextCharacterError { character } => format!(
+                "Found invalid character '{}'. Must be between a and z.",
                 character
             ),
             Error::InvalidCaesarRotation { rotation } => {
@@ -17,6 +19,11 @@ impl std::fmt::Display for Error {
                     rotation
                 )
             }
+            Error::EmptyKeyError => String::from("Key cannot be empty."),
+            Error::InvalidKeyCharacterError { character } => format!(
+                "Found invalid key character '{}'. Must be between uppercase A-Z.",
+                character
+            ),
         };
         write!(f, "{}", message)
     }

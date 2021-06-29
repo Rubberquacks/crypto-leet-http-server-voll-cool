@@ -6,6 +6,7 @@ use warp::Filter;
 
 use crypto_leet_http_server_voll_cool::caesar::encrypt_caesar;
 use crypto_leet_http_server_voll_cool::rot13::encrypt_rot13;
+use crypto_leet_http_server_voll_cool::vigenere::encrypt_vigenere;
 
 #[tokio::main]
 async fn main() {
@@ -17,7 +18,11 @@ async fn main() {
         .and(warp::body::json())
         .map(|query: CaesarQuery| handle_caesar_query(&query));
 
-    warp::serve(rot13.or(caesar))
+    let vigenere = warp::path("vigenere")
+        .and(warp::body::json())
+        .map(|query: VigenereQuery| handle_vigenere_query(&query));
+
+    warp::serve(rot13.or(caesar).or(vigenere))
         .run(([127, 0, 0, 1], 3030))
         .await;
 }
@@ -44,6 +49,19 @@ struct CaesarQuery {
 #[derive(Serialize)]
 enum CaesarReply {
     Success { rotated_text: String },
+    Failed { error: String },
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct VigenereQuery {
+    text: String,
+    key: String,
+}
+
+#[derive(Serialize)]
+enum VigenereReply {
+    Success { encrypted_text: String },
     Failed { error: String },
 }
 
@@ -74,6 +92,23 @@ fn handle_caesar_query(query: &CaesarQuery) -> reply::WithStatus<reply::Json> {
         ),
         Ok(rotated_text) => (
             reply::json(&CaesarReply::Success { rotated_text }),
+            StatusCode::OK,
+        ),
+    };
+
+    warp::reply::with_status(json, status_code)
+}
+
+fn handle_vigenere_query(query: &VigenereQuery) -> reply::WithStatus<reply::Json> {
+    let (json, status_code) = match encrypt_vigenere(&query.text, &query.key) {
+        Err(error) => (
+            reply::json(&VigenereReply::Failed {
+                error: error.to_string(),
+            }),
+            StatusCode::BAD_REQUEST,
+        ),
+        Ok(encrypted_text) => (
+            reply::json(&VigenereReply::Success { encrypted_text }),
             StatusCode::OK,
         ),
     };

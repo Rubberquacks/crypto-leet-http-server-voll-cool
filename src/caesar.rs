@@ -11,13 +11,13 @@ pub fn encrypt_caesar(to_be_rotated: &str, rotation: u8) -> Result<String, Error
         .collect()
 }
 
-fn encrypt_caesar_char(character: char, rotation: u8) -> Result<char, Error> {
+pub fn encrypt_caesar_char(character: char, rotation: u8) -> Result<char, Error> {
     let offset = if ('a'..='z').contains(&character) {
-        'a' as u8
+        b'a'
     } else if ('A'..='Z').contains(&character) {
-        'A' as u8
+        b'A'
     } else {
-        return Err(Error::InvalidCharacterError { character });
+        return Err(Error::InvalidPlaintextCharacterError { character });
     };
 
     let char_as_byte = character as u8;
@@ -60,7 +60,7 @@ mod tests {
     #[test]
     fn ascii_character_that_is_not_a_letter() {
         match encrypt_caesar("AaBb.Cc", 3) {
-            Err(Error::InvalidCharacterError { character }) => assert_eq!(character, '.'),
+            Err(Error::InvalidPlaintextCharacterError { character }) => assert_eq!(character, '.'),
             other => panic!("{:#?} was not the expected error.", other),
         }
     }
@@ -68,7 +68,7 @@ mod tests {
     #[test]
     fn non_ascii_character() {
         match encrypt_caesar("AaBbλCc", 3) {
-            Err(Error::InvalidCharacterError { character }) => assert_eq!(character, 'λ'),
+            Err(Error::InvalidPlaintextCharacterError { character }) => assert_eq!(character, 'λ'),
             other => panic!("{:#?} was not the expected error.", other),
         }
     }
