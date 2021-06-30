@@ -11,3 +11,4 @@ warp = "0.3"
 bytes = "1.0.1"
 serde = { version = "1.0.126", features = ["derive"] }
 http = "0.2.4"
+num = "0.4"
