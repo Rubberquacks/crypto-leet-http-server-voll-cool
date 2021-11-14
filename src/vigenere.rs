@@ -4,7 +4,7 @@ use crate::error::Error;
 pub fn encrypt_vigenere(plaintext: &str, key: &str) -> Result<String, Error> {
     let possibly_invalid_character = key
         .chars()
-        .find(|character| !('A'..='Z').contains(&character));
+        .find(|character| !('A'..='Z').contains(character));
     if let Some(character) = possibly_invalid_character {
         return Err(Error::InvalidKeyCharacterError { character });
     };
