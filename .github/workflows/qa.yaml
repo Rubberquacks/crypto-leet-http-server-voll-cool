@@ -1,14 +1,12 @@
-on: pull_request
-
 name: QA
-
+on: pull_request
 jobs:
   qa:
     name: Build and Test the app.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: action-rs/toolchain@v1
+      - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
       - uses: actions-rs/cargo@v1
